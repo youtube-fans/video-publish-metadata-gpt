@@ -12,11 +12,13 @@
       .grid-line {
         position: absolute;
         background-color: rgba(0, 0, 0, 0.3);
-        font-size: 12px;
+      }
+      .bounding-box-info {
+        position: absolute;
+        background-color: rgba(0, 0, 0, 0.7);
         color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        padding: 5px;
+        font-size: 12px;
       }
     </style>
   </head>
@@ -25,6 +27,7 @@
       <input type="file" id="file-input" accept="image/*" />
       <button id="start-button">Start Drawing</button>
       <button id="save-button">Save Bounding Box</button>
+      <button id="clear-button">Clear</button>
     </div>
     <div id="canvas-container">
       <canvas id="canvas" width="1480" height="920"></canvas>
@@ -46,6 +49,7 @@
 
         const startButton = document.getElementById("start-button");
         const saveButton = document.getElementById("save-button");
+        const clearButton = document.getElementById("clear-button");
         const fileInput = document.getElementById("file-input");
         const gridLinesContainer = document.getElementById("grid-lines");
 
@@ -66,8 +70,8 @@
               topRight: `(${box.x + box.width}, ${box.y})`,
               bottomLeft: `(${box.x}, ${box.y + box.height})`,
               bottomRight: `(${box.x + box.width}, ${box.y + box.height})`,
-            })),
-            fontSize,
+              fontSize: box.fontSize
+            }))
           };
           const jsonData = JSON.stringify(data);
           const blob = new Blob([jsonData], {
@@ -81,6 +85,11 @@
 
           isDrawing = false;
           startButton.disabled = false;
+        });
+
+        clearButton.addEventListener("click", () => {
+          boundingBox = [];
+          renderBoundingBox();
         });
 
         fileInput.addEventListener("change", () => {
@@ -105,9 +114,7 @@
               // Draw the image
               ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-              // Draw
-
- gridlines
+              // Draw gridlines
               drawGridlines();
 
               imageLoaded = true;
@@ -138,6 +145,7 @@
               y: Math.min(startY, endY),
               width: Math.abs(endX - startX),
               height: Math.abs(endY - startY),
+              fontSize: Math.floor(Math.abs(endY - startY) / 5)
             });
             renderBoundingBox();
           }
@@ -162,9 +170,8 @@
           ctx.beginPath();
           ctx.strokeStyle = "red";
           ctx.lineWidth = 2;
-          for (let i = 0; i < boundingBox.length; i++) {
-            const box = boundingBox[i];
-            const { x, y, width, height } = box;
+          for (const box of boundingBox) {
+            const { x, y, width, height, fontSize } = box;
             ctx.rect(x, y, width, height);
             ctx.stroke();
 
@@ -181,21 +188,11 @@
             ctx.fillText(bottomLeft, x, y + height + 15);
             ctx.fillText(bottomRight, x + width - 40, y + height + 15);
 
-            // Determine font size from rectangle height
-            const rectangleHeight = height;
-            fontSize = Math.floor(rectangleHeight / 5); // Adjust the divisor to suit your needs
-
-            // Label each grid with its serial number
-            const gridLabel = `${i + 1}`;
-            const centerX = x + width / 2;
-            const centerY = y + height / 2;
-            ctx.fillText(gridLabel, centerX, centerY);
+            // Display font name and font size
+            ctx.font = `${fontSize}px Arial`;
+            ctx.fillStyle = "white";
+            ctx.fillText(`Font Size: ${fontSize}`, x, y + fontSize + 20);
           }
-
-          // Draw the font size
-          ctx.font = `${fontSize}px Arial`;
-          ctx.fillStyle = "white";
-          ctx.fillText(`Font Size: ${fontSize}`, 10, 20);
         }
 
         function drawGridlines() {
@@ -212,11 +209,8 @@
             verticalLine.style.width = "1px";
             verticalLine.style.height = `${canvas.height}px`;
             verticalLine.style.left = `${x}px`;
-
-
             verticalLine.style.top = "0";
             verticalLine.style.backgroundColor = gridColor;
-            verticalLine.innerText = i.toString();
             gridLinesContainer.appendChild(verticalLine);
 
             // Horizontal gridlines
@@ -228,7 +222,6 @@
             horizontalLine.style.left = "0";
             horizontalLine.style.top = `${y}px`;
             horizontalLine.style.backgroundColor = gridColor;
-            horizontalLine.innerText = i.toString();
             gridLinesContainer.appendChild(horizontalLine);
           }
         }
