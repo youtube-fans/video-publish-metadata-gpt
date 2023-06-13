@@ -176,6 +176,10 @@
             // Determine font size from rectangle height
             const rectangleHeight = height;
             fontSize = Math.floor(rectangleHeight / 5); // Adjust the divisor to suit your needs
+
+            // Identify font name
+            const fontName = ctx.font.split(" ")[1];
+            ctx.fillText(`Font Name: ${fontName}`, x, y + height + 30);
           }
 
           // Draw the font size
