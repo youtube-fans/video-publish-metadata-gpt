@@ -12,6 +12,11 @@
       .grid-line {
         position: absolute;
         background-color: rgba(0, 0, 0, 0.3);
+        font-size: 12px;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
     </style>
   </head>
@@ -100,7 +105,9 @@
               // Draw the image
               ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-              // Draw gridlines
+              // Draw
+
+ gridlines
               drawGridlines();
 
               imageLoaded = true;
@@ -155,7 +162,8 @@
           ctx.beginPath();
           ctx.strokeStyle = "red";
           ctx.lineWidth = 2;
-          for (const box of boundingBox) {
+          for (let i = 0; i < boundingBox.length; i++) {
+            const box = boundingBox[i];
             const { x, y, width, height } = box;
             ctx.rect(x, y, width, height);
             ctx.stroke();
@@ -177,9 +185,11 @@
             const rectangleHeight = height;
             fontSize = Math.floor(rectangleHeight / 5); // Adjust the divisor to suit your needs
 
-            // Identify font name
-            const fontName = ctx.font.split(" ")[1];
-            ctx.fillText(`Font Name: ${fontName}`, x, y + height + 30);
+            // Label each grid with its serial number
+            const gridLabel = `${i + 1}`;
+            const centerX = x + width / 2;
+            const centerY = y + height / 2;
+            ctx.fillText(gridLabel, centerX, centerY);
           }
 
           // Draw the font size
@@ -202,8 +212,11 @@
             verticalLine.style.width = "1px";
             verticalLine.style.height = `${canvas.height}px`;
             verticalLine.style.left = `${x}px`;
+
+
             verticalLine.style.top = "0";
             verticalLine.style.backgroundColor = gridColor;
+            verticalLine.innerText = i.toString();
             gridLinesContainer.appendChild(verticalLine);
 
             // Horizontal gridlines
@@ -215,6 +228,7 @@
             horizontalLine.style.left = "0";
             horizontalLine.style.top = `${y}px`;
             horizontalLine.style.backgroundColor = gridColor;
+            horizontalLine.innerText = i.toString();
             gridLinesContainer.appendChild(horizontalLine);
           }
         }
