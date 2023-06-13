@@ -61,6 +61,7 @@
                 let fontSize = 16;
                 let imageLoaded = false;
                 let image;
+                let gridSerialNumberElements = [];
 
                 const startButton = document.getElementById("start-button");
                 const saveButton = document.getElementById("save-button");
@@ -69,7 +70,28 @@
                 const gridSizeInput = document.getElementById("grid-size-input");
                 const gridLinesContainer = document.getElementById("grid-lines");
                 const boundingBoxesContainer = document.getElementById("bounding-boxes");
+                const displayGridCheckbox = document.getElementById("display-grid-checkbox");
 
+                function showGridSerialNumbers() {
+    for (const element of gridSerialNumberElements) {
+        element.style.display = "block";
+    }
+}
+
+function hideGridSerialNumbers() {
+    for (const element of gridSerialNumberElements) {
+        element.style.display = "none";
+    }
+}                
+
+                displayGridCheckbox.addEventListener("change", () => {
+    const displayGrid = displayGridCheckbox.checked;
+    if (displayGrid) {
+        showGridSerialNumbers();
+    } else {
+        hideGridSerialNumbers();
+    }
+});
                 startButton.addEventListener("click", () => {
                     isDrawing = true;
                     startButton.disabled = true;
@@ -248,7 +270,7 @@
                         const gridSerialNumber = (gridY - 1) * gridSize + gridX;
 
                         // Display the grid zone serial number under the bounding box
-                        ctx.fillText(`Grid Zone: ${gridSerialNumber}`, x, y + height + (fontSize*4) + 20);
+                        ctx.fillText(`Nearest Grid Zone: ${gridSerialNumber}`, x, y + height + (fontSize*4) + 20);
     // Display font color outside the bounding box
                         const fontcolor=guessFontColor(x, y, width, height)
                       ctx.fillText(`font color: ${fontcolor}`, x, y + height + (fontSize*5 ) + 30);
@@ -359,7 +381,15 @@
                             gridSerialNumber.style.top = `${
                                 centerY - gridSerialNumber.offsetHeight / 2
                             }px`;
-                            gridLinesContainer.appendChild(gridSerialNumber);
+                            // gridLinesContainer.appendChild(gridSerialNumber);
+
+                            gridSerialNumberElements.push(gridSerialNumber);
+
+
+
+         
+
+
                         }
                     }
                 }
