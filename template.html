@@ -1,103 +1,105 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Image Annotation</title>
-    <style>
-        #canvas-container {
-            position: relative;
-        }
-        #canvas {
-            border: 1px solid #000;
-        }
-        .grid-line {
-            position: absolute;
-            background-color: rgba(0, 0, 0, 0.3);
-        }
-        .grid-serial-number {
-            position: absolute;
-            font-size: 12px;
-            color: white;
-        }
-        .bounding-box {
-            position: absolute;
-            border: 2px solid red;
-            color: white;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 2px;
-        }
-    </style>
-</head>
-<body>
-<div>
-    <input type="file" id="file-input" accept="image/*"/>
-    <button id="start-button">Start Drawing</button>
-    <button id="save-button">Save Bounding Box</button>
-    <button id="clear-button">Clear Bounding Box</button>
-</div>
-<div>
-    <label for="grid-size-input">Grid Size:</label>
-    <input type="number" id="grid-size-input" min="1" value="10"/>
-    <label for="display-text-color-input">Display Text Color:</label>
-    <input type="text" id="display-text-color-input" value="yellow" />
-    <label for="display-grid-checkbox">Display Grid Zone Number:</label>
-    <input type="checkbox" id="display-grid-checkbox" name="display-grid" checked />
-</div>
-<div id="canvas-container">
-    <canvas id="canvas" width="1480" height="920"></canvas>
-    <div id="grid-lines"></div>
-    <div id="bounding-boxes"></div>
-</div>
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
-        let isDrawing = false;
-        let startX = 0;
-        let startY = 0;
-        let endX = 0;
-        let endY = 0;
-        let boundingBox = [];
-        let fontSize = 16;
-        let imageLoaded = false;
-        let image;
-        let gridSerialNumberElements = [];
-        let nearestGridSerialNumber;
-        const startButton = document.getElementById("start-button");
-        const saveButton = document.getElementById("save-button");
-        const clearButton = document.getElementById("clear-button");
-        const fileInput = document.getElementById("file-input");
-        const gridSizeInput = document.getElementById("grid-size-input");
-        const gridLinesContainer = document.getElementById("grid-lines");
-        const boundingBoxesContainer = document.getElementById("bounding-boxes");
-        const displayGridCheckbox = document.getElementById("display-grid-checkbox");
-        gridSerialNumberElements = Array.from(document.getElementsByClassName("grid-serial-number"));
-        gridLinesContainer.innerHTML = "";
-
-        function showGridSerialNumbers() {
-            gridLinesContainer.style.display = "block";
-        }
-
-        function hideGridSerialNumbers() {
-            gridLinesContainer.style.display = "none";
-        }
-
-        displayGridCheckbox.addEventListener("change", () => {
-            const displayGrid = displayGridCheckbox.checked;
-            if (displayGrid) {
-                showGridSerialNumbers();
-            } else {
-                hideGridSerialNumbers();
+    <head>
+        <title>Image Annotation</title>
+        <style>
+            #canvas-container {
+                position: relative;
             }
-        });
-
-        displayGridCheckbox.addEventListener("change", () => {
-            const displayGrid = displayGridCheckbox.checked;
-            if (displayGrid) {
-                showGridSerialNumbers();
-            } else {
-                hideGridSerialNumbers();
+            #canvas {
+                border: 1px solid #000;
             }
-        });
+            .grid-line {
+                position: absolute;
+                background-color: rgba(0, 0, 0, 0.3);
+            }
+            .grid-serial-number {
+                position: absolute;
+                font-size: 12px;
+                color: white;
+            }
+            .bounding-box {
+                position: absolute;
+                border: 2px solid red;
+                color: white;
+                background-color: rgba(0, 0, 0, 0.5);
+                padding: 2px;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <input type="file" id="file-input" accept="image/*"/>
+            <button id="start-button">Start Drawing</button>
+            <button id="save-button">Save Bounding Box</button>
+            <button id="clear-button">Clear Bounding Box</button>
+            <input type="file" id="json-file-input" accept=".json">
+            <button id="select-json-file-button">Select JSON File</button>
+        </div>
+        <div>
+            <label for="grid-size-input">Grid Size:</label>
+            <input type="number" id="grid-size-input" min="1" value="10"/>
+            <label for="display-text-color-input">Display Text Color:</label>
+            <input type="text" id="display-text-color-input" value="yellow"/>
+            <label for="display-grid-checkbox">Display Grid Zone Number:</label>
+            <input type="checkbox" id="display-grid-checkbox" name="display-grid" checked/>
+        </div>
+        <div id="canvas-container">
+            <canvas id="canvas" width="1480" height="920"></canvas>
+            <div id="grid-lines"></div>
+            <div id="bounding-boxes"></div>
+        </div>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const canvas = document.getElementById("canvas");
+                const ctx = canvas.getContext("2d");
+                let isDrawing = false;
+                let startX = 0;
+                let startY = 0;
+                let endX = 0;
+                let endY = 0;
+                let boundingBox = [];
+                let fontSize = 16;
+                let imageLoaded = false;
+                let image;
+                let gridSerialNumberElements = [];
+                let nearestGridSerialNumber;
+                const startButton = document.getElementById("start-button");
+                const saveButton = document.getElementById("save-button");
+                const clearButton = document.getElementById("clear-button");
+                const fileInput = document.getElementById("file-input");
+                const gridSizeInput = document.getElementById("grid-size-input");
+                const gridLinesContainer = document.getElementById("grid-lines");
+                const boundingBoxesContainer = document.getElementById("bounding-boxes");
+                const displayGridCheckbox = document.getElementById("display-grid-checkbox");
+                gridSerialNumberElements = Array.from(document.getElementsByClassName("grid-serial-number"));
+                gridLinesContainer.innerHTML = "";
+
+                function showGridSerialNumbers() {
+                    gridLinesContainer.style.display = "block";
+                }
+
+                function hideGridSerialNumbers() {
+                    gridLinesContainer.style.display = "none";
+                }
+
+                displayGridCheckbox.addEventListener("change", () => {
+                    const displayGrid = displayGridCheckbox.checked;
+                    if (displayGrid) {
+                        showGridSerialNumbers();
+                    } else {
+                        hideGridSerialNumbers();
+                    }
+                });
+
+                displayGridCheckbox.addEventListener("change", () => {
+                    const displayGrid = displayGridCheckbox.checked;
+                    if (displayGrid) {
+                        showGridSerialNumbers();
+                    } else {
+                        hideGridSerialNumbers();
+                    }
+                });
 
                 startButton.addEventListener("click", () => {
                     isDrawing = true;
@@ -137,7 +139,8 @@
                                 fontSize: box.fontSize,
                                 fontName: guessFontName(box),
                                 gridSize: parseInt(gridSizeInput.value),
-                                nearestGridSerialNumber: nearestGridSerialNumber
+                                nearestGridSerialNumber: box.nearestGridSerialNumber,
+                                fontcolor:guessFontColor(box.x,box.y,box.width,box.height)
                             })
                         )
                     };
@@ -200,6 +203,7 @@
                 canvas.addEventListener("mouseup", stopDrawing);
                 canvas.addEventListener("mousemove", drawRectangle);
 
+
                 function startDrawing(event) {
                     if (isDrawing && imageLoaded) {
                         startX = event.offsetX;
@@ -216,7 +220,8 @@
                             y: Math.min(startY, endY),
                             width: Math.abs(endX - startX),
                             height: Math.abs(endY - startY),
-                            fontSize: calculateFontSize(Math.abs(endY - startY))
+                            fontSize: calculateFontSize(Math.abs(endY - startY)),
+                            nearestGridSerialNumber: nearestGridSerialNumber
                         });
                         renderBoundingBox();
                     }
@@ -251,14 +256,13 @@
                         // Display font size and font name under the bounding box
                         ctx.font = `${fontSize}px Arial`;
                         ctx.fillStyle = document.getElementById("display-text-color-input").value || "yellow";
-                        ctx.fillText(`Font Size: ${fontSize}`, x, y + height + fontSize*2 + 5);
-                        ctx.fillText(`Font Name: ${fontName}`, x, y + height + (fontSize*3 ) + 10);
+                        ctx.fillText(`Font Size: ${fontSize}`, x, y + height + fontSize * 2 + 5);
+                        ctx.fillText(`Font Name: ${fontName}`, x, y + height + (fontSize * 3) + 10);
 
                         // Display the bounding box coordinates
                         ctx.font = "12px Arial";
-                        
-                        ctx.fillStyle = document.getElementById("display-text-color-input").value || "yellow";
-; // Update the font color to yellow
+
+                        ctx.fillStyle = document.getElementById("display-text-color-input").value || "yellow";; // Update the font color to yellow
                         ctx.fillText(`Left-Top: (${x}, ${y})`, x, y - 20);
                         ctx.fillText(`Left-Down: (${x}, ${
                             y + height
@@ -281,10 +285,10 @@
                         nearestGridSerialNumber = (gridY - 1) * gridSize + gridX;
 
                         // Display the grid zone serial number under the bounding box
-                        ctx.fillText(`Nearest Grid Zone: ${nearestGridSerialNumber}`, x, y + height + (fontSize*4) + 20);
-    // Display font color outside the bounding box
-                        const fontcolor=guessFontColor(x, y, width, height)
-                      ctx.fillText(`font color: ${fontcolor}`, x, y + height + (fontSize*5 ) + 30);
+                        ctx.fillText(`Nearest Grid Zone: ${nearestGridSerialNumber}`, x, y + height + (fontSize * 4) + 20);
+                        // Display font color outside the bounding box
+                        const fontcolor = guessFontColor(x, y, width, height)
+                        ctx.fillText(`font color: ${fontcolor}`, x, y + height + (fontSize * 5) + 30);
 
                     }
                 }
@@ -397,11 +401,6 @@
                             gridLinesContainer.appendChild(gridSerialNumber);
 
 
-
-
-         
-
-
                         }
                     }
                 }
@@ -447,6 +446,37 @@
                         return "Unknown";
                     }
                 }
+
+                // Assuming you have a reference to the "Select JSON File" button and the JSON file input
+                const selectJsonFileButton = document.getElementById('select-json-file-button');
+                const jsonFileInput = document.getElementById('json-file-input');
+
+                // Add an event listener to the "Select JSON File" button
+                selectJsonFileButton.addEventListener('click', () => {
+                    jsonFileInput.click();
+                });
+
+                // Add an event listener to the JSON file input
+                jsonFileInput.addEventListener('change', () => {
+                    const file = jsonFileInput.files[0];
+                    const reader = new FileReader();
+
+                    reader.onload = (event) => {
+                        const jsonContent = event.target.result;
+                        const parsedData = JSON.parse(jsonContent);
+
+                        // Access the "boundingBox" property in the parsed JSON data
+                        const boundingBox = parsedData.boundingBox;
+
+                        // Do something with the parsed JSON data
+                        console.log(boundingBox);
+                        // You can iterate over the boundingBox array and perform necessary actions
+                    };
+
+                    reader.readAsText(file);
+                });
+
+
             });
         </script>
     </body>
