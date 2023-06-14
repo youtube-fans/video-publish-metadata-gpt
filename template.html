@@ -25,6 +25,10 @@
                 background-color: rgba(0, 0, 0, 0.5);
                 padding: 2px;
             }
+            .grid-serial-number {
+                /* ... */
+                display: none; /* Added display none initially */
+            }
         </style>
     </head>
     <body>
@@ -38,10 +42,10 @@
             <label for="grid-size-input">Grid Size:</label>
             <input type="number" id="grid-size-input" min="1" value="10"/>
             <label for="display-text-color-input">display text Color:</label>
-            <input type="text" id="display-text-color-input" value="yellow" />
-              <label for="display-grid-checkbox">Display Grid Zone Number:</label>
-              <input type="radio" id="display-grid-checkbox" name="display-grid" checked />
-            
+            <input type="text" id="display-text-color-input" value="yellow"/>
+            <label for="display-grid-checkbox">Display Grid Zone Number:</label>
+            <input type="checkbox" id="display-grid-checkbox" checked/>
+
         </div>
         <div id="canvas-container">
             <canvas id="canvas" width="1480" height="920"></canvas>
@@ -72,14 +76,35 @@
                 const boundingBoxesContainer = document.getElementById("bounding-boxes");
                 const displayGridCheckbox = document.getElementById("display-grid-checkbox");
 
-  displayGridCheckbox.addEventListener("click", () => {
-    const gridSerialNumbers = document.getElementsByClassName("grid-serial-number");
-    for (let i = 0; i < gridSerialNumbers.length; i++) {
-      const gridSerialNumber = gridSerialNumbers[i];
-      gridSerialNumber.style.visibility = displayGridCheckbox.checked ? "visible" : "hidden";
-    }
-  });
-});
+                function showGridSerialNumbers() {
+                    for (const element of gridSerialNumberElements) {
+                        element.style.display = "block";
+                    }
+                }
+
+                function hideGridSerialNumbers() {
+                    for (const element of gridSerialNumberElements) {
+                        element.style.display = "none";
+                    }
+                }
+
+                displayGridCheckbox.addEventListener("change", () => {
+                    const displayGrid = displayGridCheckbox.checked;
+                    if (displayGrid) {
+                        showGridSerialNumbers();
+                    } else {
+                        hideGridSerialNumbers();
+                    }
+                });
+
+                displayGridCheckbox.addEventListener("change", () => {
+                    const displayGrid = displayGridCheckbox.checked;
+                    if (displayGrid) {
+                        showGridSerialNumbers();
+                    } else {
+                        hideGridSerialNumbers();
+                    }
+                });
                 startButton.addEventListener("click", () => {
                     isDrawing = true;
                     startButton.disabled = true;
@@ -228,14 +253,13 @@
                         // Display font size and font name under the bounding box
                         ctx.font = `${fontSize}px Arial`;
                         ctx.fillStyle = document.getElementById("display-text-color-input").value || "yellow";
-                        ctx.fillText(`Font Size: ${fontSize}`, x, y + height + fontSize*2 + 5);
-                        ctx.fillText(`Font Name: ${fontName}`, x, y + height + (fontSize*3 ) + 10);
+                        ctx.fillText(`Font Size: ${fontSize}`, x, y + height + fontSize * 2 + 5);
+                        ctx.fillText(`Font Name: ${fontName}`, x, y + height + (fontSize * 3) + 10);
 
                         // Display the bounding box coordinates
                         ctx.font = "12px Arial";
-                        
-                        ctx.fillStyle = document.getElementById("display-text-color-input").value || "yellow";
-; // Update the font color to yellow
+
+                        ctx.fillStyle = document.getElementById("display-text-color-input").value || "yellow";; // Update the font color to yellow
                         ctx.fillText(`Left-Top: (${x}, ${y})`, x, y - 20);
                         ctx.fillText(`Left-Down: (${x}, ${
                             y + height
@@ -258,10 +282,10 @@
                         const gridSerialNumber = (gridY - 1) * gridSize + gridX;
 
                         // Display the grid zone serial number under the bounding box
-                        ctx.fillText(`Nearest Grid Zone: ${gridSerialNumber}`, x, y + height + (fontSize*4) + 20);
-    // Display font color outside the bounding box
-                        const fontcolor=guessFontColor(x, y, width, height)
-                      ctx.fillText(`font color: ${fontcolor}`, x, y + height + (fontSize*5 ) + 30);
+                        ctx.fillText(`Nearest Grid Zone: ${gridSerialNumber}`, x, y + height + (fontSize * 4) + 20);
+                        // Display font color outside the bounding box
+                        const fontcolor = guessFontColor(x, y, width, height)
+                        ctx.fillText(`font color: ${fontcolor}`, x, y + height + (fontSize * 5) + 30);
 
                     }
                 }
@@ -369,13 +393,9 @@
                             gridSerialNumber.style.top = `${
                                 centerY - gridSerialNumber.offsetHeight / 2
                             }px`;
-                            // gridLinesContainer.appendChild(gridSerialNumber);
-
-                            gridSerialNumberElements.push(gridSerialNumber);
-
-
-
-         
+                            gridLinesContainer.appendChild(gridSerialNumber);
+// 
+                            // gridSerialNumberElements.push(gridSerialNumber);
 
 
                         }
