@@ -72,25 +72,13 @@
                 const boundingBoxesContainer = document.getElementById("bounding-boxes");
                 const displayGridCheckbox = document.getElementById("display-grid-checkbox");
 
-                function showGridSerialNumbers() {
-    for (const element of gridSerialNumberElements) {
-        element.style.display = "block";
+  displayGridCheckbox.addEventListener("change", () => {
+    const gridSerialNumbers = document.getElementsByClassName("grid-serial-number");
+    for (let i = 0; i < gridSerialNumbers.length; i++) {
+      const gridSerialNumber = gridSerialNumbers[i];
+      gridSerialNumber.style.visibility = displayGridCheckbox.checked ? "visible" : "hidden";
     }
-}
-
-function hideGridSerialNumbers() {
-    for (const element of gridSerialNumberElements) {
-        element.style.display = "none";
-    }
-}                
-
-                displayGridCheckbox.addEventListener("change", () => {
-    const displayGrid = displayGridCheckbox.checked;
-    if (displayGrid) {
-        showGridSerialNumbers();
-    } else {
-        hideGridSerialNumbers();
-    }
+  });
 });
                 startButton.addEventListener("click", () => {
                     isDrawing = true;
