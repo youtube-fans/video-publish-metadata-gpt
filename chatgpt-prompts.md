@@ -26,7 +26,7 @@ resize the background image to result image size ,then we need draw text on the 
 this processing logic should run in the client browser instead of severside
 
 create a html page ,user can submit the csv,json or excel input file, after submit we can hit a button named process to trigger processing code, after processing, we have a table list ,where the input file fields and two result image are in the table,replace the image path after processing done, when click the result image name, we can preview the result image in the page.the processing code is:
-
+```
 function calculateTextSize(text, font) {
 const canvas = document.createElement('canvas');
 const context = canvas.getContext('2d');
@@ -352,3 +352,449 @@ alert('Invalid file format. Please upload an Excel file (.xlsx), a CSV file (.cs
 }
 
 document.getElementById('process-button').addEventListener('click', processData);
+```
+
+update the code, rename Display Grid Zone Number checkbox to showgridline, by default it is disable, when user click it,First we should show gridlines according to gridsize value.second we should show gridzone serial number in each center of grid zone.  make sure when gridsize value changes,gridlines and grid zone serial number should change too. :
+```
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Image Annotation</title>
+        <style>
+            #canvas-container {
+                position: relative;
+            }
+            #canvas {
+                border: 1px solid #000;
+            }
+            .grid-line {
+                position: absolute;
+                background-color: rgba(0, 0, 0, 0.3);
+            }
+            .grid-serial-number {
+                position: absolute;
+                font-size: 12px;
+                color: white;
+            }
+            .bounding-box {
+                position: absolute;
+                border: 2px solid red;
+                color: white;
+                background-color: rgba(0, 0, 0, 0.5);
+                padding: 2px;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <input type="file" id="file-input" accept="image/*"/>
+            <button id="start-button">Start Drawing</button>
+            <button id="save-button">Save Bounding Box</button>
+            <button id="clear-button">Clear Bounding Box</button>
+        </div>
+        <div>
+            <label for="grid-size-input">Grid Size:</label>
+            <input type="number" id="grid-size-input" min="1" value="10"/>
+            <label for="display-text-color-input">display text Color:</label>
+            <input type="text" id="display-text-color-input" value="yellow" />
+              <label for="display-grid-checkbox">Display Grid Zone Number:</label>
+              <input type="radio" id="display-grid-checkbox" name="display-grid" checked />
+            
+        </div>
+        <div id="canvas-container">
+            <canvas id="canvas" width="1480" height="920"></canvas>
+            <div id="grid-lines"></div>
+            <div id="bounding-boxes"></div>
+        </div>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const canvas = document.getElementById("canvas");
+                const ctx = canvas.getContext("2d");
+                let isDrawing = false;
+                let startX = 0;
+                let startY = 0;
+                let endX = 0;
+                let endY = 0;
+                let boundingBox = [];
+                let fontSize = 16;
+                let imageLoaded = false;
+                let image;
+                let gridSerialNumberElements = [];
+
+                const startButton = document.getElementById("start-button");
+                const saveButton = document.getElementById("save-button");
+                const clearButton = document.getElementById("clear-button");
+                const fileInput = document.getElementById("file-input");
+                const gridSizeInput = document.getElementById("grid-size-input");
+                const gridLinesContainer = document.getElementById("grid-lines");
+                const boundingBoxesContainer = document.getElementById("bounding-boxes");
+                const displayGridCheckbox = document.getElementById("display-grid-checkbox");
+
+                function showGridSerialNumbers() {
+    for (const element of gridSerialNumberElements) {
+        element.style.display = "block";
+    }
+}
+
+function hideGridSerialNumbers() {
+    for (const element of gridSerialNumberElements) {
+        element.style.display = "none";
+    }
+}                
+
+                displayGridCheckbox.addEventListener("change", () => {
+    const displayGrid = displayGridCheckbox.checked;
+    if (displayGrid) {
+        showGridSerialNumbers();
+    } else {
+        hideGridSerialNumbers();
+    }
+});
+                startButton.addEventListener("click", () => {
+                    isDrawing = true;
+                    startButton.disabled = true;
+                });
+
+                saveButton.addEventListener("click", () => { // Save the bounding box coordinates, font size, and font name
+                    const data = {
+                        boundingBox: boundingBox.map(
+                            (box, index) => ({
+                                x: box.x,
+                                y: box.y,
+                                width: box.width,
+                                height: box.height,
+                                topLeft: `(${
+                                    box.x
+                                }, ${
+                                    box.y
+                                })`,
+                                topRight: `(${
+                                    box.x + box.width
+                                }, ${
+                                    box.y
+                                })`,
+                                bottomLeft: `(${
+                                    box.x
+                                }, ${
+                                    box.y + box.height
+                                })`,
+                                bottomRight: `(${
+                                    box.x + box.width
+                                }, ${
+                                    box.y + box.height
+                                })`,
+                                fontSize: box.fontSize,
+                                fontName: guessFontName(box),
+                                serialNumber: index + 1
+                            })
+                        )
+                    };
+                    const jsonData = JSON.stringify(data);
+                    const blob = new Blob([jsonData], {type: "text/plain;charset=utf-8"});
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = "bounding_box_data.txt";
+                    link.click();
+
+                    isDrawing = false;
+                    startButton.disabled = false;
+                });
+
+                clearButton.addEventListener("click", () => {
+                    boundingBox = [];
+                    renderBoundingBox();
+                });
+
+                fileInput.addEventListener("change", () => {
+                    const file = fileInput.files[0];
+                    const reader = new FileReader();
+
+                    reader.onload = function (event) {
+                        image = new Image();
+                        image.onload = function () { // Resize the image to fit the canvas
+                            const aspectRatio = image.width / image.height;
+                            const canvasWidth = canvas.width;
+                            const canvasHeight = canvasWidth / aspectRatio;
+                            if (canvasHeight > canvas.height) {
+                                canvas.height = canvas.height;
+                                canvas.width = canvas.height * aspectRatio;
+                            } else {
+                                canvas.width = canvasWidth;
+                                canvas.height = canvasHeight;
+                            }
+
+                            // Draw the image
+                            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                            // Draw gridlines
+                            drawGridlines();
+
+                            imageLoaded = true;
+                        };
+                        image.src = event.target.result;
+                    };
+
+                    reader.readAsDataURL(file);
+                });
+
+                gridSizeInput.addEventListener("change", () => {
+                    drawGridlines();
+                    renderBoundingBox();
+                });
+
+                canvas.addEventListener("mousedown", startDrawing);
+                canvas.addEventListener("mouseup", stopDrawing);
+                canvas.addEventListener("mousemove", drawRectangle);
+
+                function startDrawing(event) {
+                    if (isDrawing && imageLoaded) {
+                        startX = event.offsetX;
+                        startY = event.offsetY;
+                        endX = startX;
+                        endY = startY;
+                    }
+                }
+
+                function stopDrawing() {
+                    if (isDrawing && imageLoaded) {
+                        boundingBox.push({
+                            x: Math.min(startX, endX),
+                            y: Math.min(startY, endY),
+                            width: Math.abs(endX - startX),
+                            height: Math.abs(endY - startY),
+                            fontSize: calculateFontSize(Math.abs(endY - startY))
+                        });
+                        renderBoundingBox();
+                    }
+                }
+
+                function drawRectangle(event) {
+                    if (isDrawing && imageLoaded) {
+                        endX = event.offsetX;
+                        endY = event.offsetY;
+                        renderBoundingBox();
+                    }
+                }
+                function renderBoundingBox() { // Clear the canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Draw the image
+                    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                    // Draw the bounding boxes
+                    ctx.beginPath();
+                    ctx.strokeStyle = "red";
+                    ctx.lineWidth = 2;
+                    for (const box of boundingBox) {
+                        const {x, y, width, height} = box;
+                        ctx.rect(x, y, width, height);
+                        ctx.stroke();
+
+                        // Determine font size and font name
+                        const fontSize = box.fontSize;
+                        const fontName = guessFontName(box);
+
+                        // Display font size and font name under the bounding box
+                        ctx.font = `${fontSize}px Arial`;
+                        ctx.fillStyle = document.getElementById("display-text-color-input").value || "yellow";
+                        ctx.fillText(`Font Size: ${fontSize}`, x, y + height + fontSize*2 + 5);
+                        ctx.fillText(`Font Name: ${fontName}`, x, y + height + (fontSize*3 ) + 10);
+
+                        // Display the bounding box coordinates
+                        ctx.font = "12px Arial";
+                        
+                        ctx.fillStyle = document.getElementById("display-text-color-input").value || "yellow";
+; // Update the font color to yellow
+                        ctx.fillText(`Left-Top: (${x}, ${y})`, x, y - 20);
+                        ctx.fillText(`Left-Down: (${x}, ${
+                            y + height
+                        })`, x, y + height + 15);
+                        ctx.fillText(`Right-Top: (${
+                            x + width
+                        }, ${y})`, x + width - 60, y - 20);
+                        ctx.fillText(`Right-Down: (${
+                            x + width
+                        }, ${
+                            y + height
+                        })`, x + width - 85, y + height + 15);
+
+                        // Calculate the nearest grid zone serial number
+                        const gridSize = parseInt(gridSizeInput.value);
+                        const gridWidth = canvas.width / gridSize;
+                        const gridHeight = canvas.height / gridSize;
+                        const gridX = Math.floor(x / gridWidth) + 1;
+                        const gridY = Math.floor(y / gridHeight) + 1;
+                        const gridSerialNumber = (gridY - 1) * gridSize + gridX;
+
+                        // Display the grid zone serial number under the bounding box
+                        ctx.fillText(`Nearest Grid Zone: ${gridSerialNumber}`, x, y + height + (fontSize*4) + 20);
+    // Display font color outside the bounding box
+                        const fontcolor=guessFontColor(x, y, width, height)
+                      ctx.fillText(`font color: ${fontcolor}`, x, y + height + (fontSize*5 ) + 30);
+
+                    }
+                }
+
+
+                function guessFontColor(x, y, width, height) {
+                    const data = ctx.getImageData(x, y, width, height).data;
+
+                    // Loop through the pixels and find the most common color
+                    const colorCounts = new Map();
+                    for (let i = 0; i < data.length; i += 4) {
+                        const color = `rgb(${
+                            data[i]
+                        }, ${
+                            data[i + 1]
+                        }, ${
+                            data[i + 2]
+                        })`;
+                        const count = colorCounts.get(color) || 0;
+                        colorCounts.set(color, count + 1);
+                    }
+
+                    // Find the color with the maximum count
+                    let maxCount = 0;
+                    let mostCommonColor;
+                    for (const [color, count] of colorCounts.entries()) {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            mostCommonColor = color;
+                        }
+                    }
+
+                    return mostCommonColor;
+                }
+
+                function getCornerCoordinates(box) {
+                    const {x, y, width, height} = box;
+                    const topLeft = `(${x}, ${y})`;
+                    const topRight = `(${
+                        x + width
+                    }, ${y})`;
+                    const bottomLeft = `(${x}, ${
+                        y + height
+                    })`;
+                    const bottomRight = `(${
+                        x + width
+                    }, ${
+                        y + height
+                    })`;
+                    return `${topLeft}, ${topRight}, ${bottomLeft}, ${bottomRight}`;
+                }
+
+                function drawGridlines() {
+                    const gridSize = parseInt(gridSizeInput.value);
+                    const gridColor = "rgba(0, 0, 0, 0.3)";
+                    const cellWidth = canvas.width / gridSize;
+                    const cellHeight = canvas.height / gridSize;
+
+                    // Clear the grid lines container
+                    gridLinesContainer.innerHTML = "";
+
+                    for (let i = 0; i < gridSize; i++) {
+                        for (let j = 0; j < gridSize; j++) { // Calculate the coordinates of the grid zone
+                            const x = j * cellWidth;
+                            const y = i * cellHeight;
+
+                            // Vertical gridlines
+                            const verticalLine = document.createElement("div");
+                            verticalLine.classList.add("grid-line");
+                            verticalLine.style.left = `${x}px`;
+                            verticalLine.style.top = "0";
+                            verticalLine.style.width = "1px";
+                            verticalLine.style.height = `${
+                                canvas.height
+                            }px`;
+                            verticalLine.style.backgroundColor = gridColor;
+                            gridLinesContainer.appendChild(verticalLine);
+
+                            // Horizontal gridlines
+                            const horizontalLine = document.createElement("div");
+                            horizontalLine.classList.add("grid-line");
+                            horizontalLine.style.left = "0";
+                            horizontalLine.style.top = `${y}px`;
+                            horizontalLine.style.width = `${
+                                canvas.width
+                            }px`;
+                            horizontalLine.style.height = "1px";
+                            horizontalLine.style.backgroundColor = gridColor;
+                            gridLinesContainer.appendChild(horizontalLine);
+
+                            // Serial number for each grid
+                            const gridSerialNumber = document.createElement("div");
+                            gridSerialNumber.classList.add("grid-serial-number");
+                            const serialNumber = i * gridSize + j + 1;
+                            if (serialNumber <= 100) {
+                                gridSerialNumber.innerText = serialNumber.toString();
+                            }
+                            // Calculate the center coordinates of the grid zone
+                            const centerX = x + cellWidth / 2;
+                            const centerY = y + cellHeight / 2;
+                            // Position the serial number in the center of the grid zone
+                            gridSerialNumber.style.left = `${
+                                centerX - gridSerialNumber.offsetWidth / 2
+                            }px`;
+                            gridSerialNumber.style.top = `${
+                                centerY - gridSerialNumber.offsetHeight / 2
+                            }px`;
+                            // gridLinesContainer.appendChild(gridSerialNumber);
+
+                            gridSerialNumberElements.push(gridSerialNumber);
+
+
+
+         
+
+
+                        }
+                    }
+                }
+
+                function calculateFontSize(height) {
+                    return Math.round(height / 4);
+                }
+
+                function guessFontName(box) {
+                    const {x, y, width, height} = box;
+                    const data = ctx.getImageData(x, y, width, height).data;
+
+                    // Loop through the pixels and find the most common color
+                    const colorCounts = new Map();
+                    for (let i = 0; i < data.length; i += 4) {
+                        const color = `rgb(${
+                            data[i]
+                        }, ${
+                            data[i + 1]
+                        }, ${
+                            data[i + 2]
+                        })`;
+                        const count = colorCounts.get(color) || 0;
+                        colorCounts.set(color, count + 1);
+                    }
+
+                    // Find the color with the maximum count
+                    let maxCount = 0;
+                    let mostCommonColor;
+                    for (const [color, count] of colorCounts.entries()) {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            mostCommonColor = color;
+                        }
+                    }
+
+                    // Use the most common color to guess the font name
+                    if (mostCommonColor === "rgb(0, 0, 0)") {
+                        return "Arial";
+                    } else if (mostCommonColor === "rgb(255, 255, 255)") {
+                        return "Times New Roman";
+                    } else {
+                        return "Unknown";
+                    }
+                }
+            });
+        </script>
+    </body>
+</html>
+```
