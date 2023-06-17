@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Thumbnail Template Image Annotation</title>
-        <style>
+      <title>Thumbnail Template Image Annotation</title>
+      <style>
             #canvas-container {
                 position: relative;
             }
@@ -29,21 +29,31 @@
     </head>
     <body>
         <div>
-            <input type="file" id="file-input" accept="image/*"/>
+            <p>select background image:
+            <input type="file" id="file-input" accept="image/*" />
+        
+            <button id="save-button">Save template</button>
+        
+        </p>
             <button id="start-button">Start Drawing</button>
-            <button id="save-button">Save Bounding Box</button>
-            <button id="clear-button">Clear Bounding Box</button>
-            <input type="file" id="json-file-input" accept=".json">
-            <button id="select-json-file-button">Select JSON File</button>
+            <button id="clear-button">Clear Drawing</button>
+
         </div>
-        <div>
+        <p>settings:        
+
             <label for="grid-size-input">Grid Size:</label>
             <input type="number" id="grid-size-input" min="1" value="10"/>
             <label for="display-text-color-input">Display Text Color:</label>
             <input type="text" id="display-text-color-input" value="yellow"/>
             <label for="display-grid-checkbox">Display Grid Zone Number:</label>
             <input type="checkbox" id="display-grid-checkbox" name="display-grid" checked/>
-        </div>
+    </p>
+        <div>
+            <input type="file" id="json-file-input" accept=".json" hidden>
+
+            <button id="select-json-file-button">gen thumbnail from JSON File</button>
+
+            </div>
         <div id="canvas-container">
             <canvas id="canvas" width="1480" height="920"></canvas>
             <div id="grid-lines"></div>
@@ -69,6 +79,8 @@
                 const clearButton = document.getElementById("clear-button");
                 const fileInput = document.getElementById("file-input");
                 const gridSizeInput = document.getElementById("grid-size-input");
+                const displayTextColorInput = document.getElementById("display-text-color-input");
+
                 const gridLinesContainer = document.getElementById("grid-lines");
                 const boundingBoxesContainer = document.getElementById("bounding-boxes");
                 const displayGridCheckbox = document.getElementById("display-grid-checkbox");
@@ -199,6 +211,12 @@
                     renderBoundingBox();
                 });
 
+
+                displayTextColorInput.addEventListener("change", () => {
+                    drawGridlines();
+                    renderBoundingBox();
+                });
+
                 canvas.addEventListener("mousedown", startDrawing);
                 canvas.addEventListener("mouseup", stopDrawing);
                 canvas.addEventListener("mousemove", drawRectangle);
@@ -254,10 +272,12 @@
                         const fontName = guessFontName(box);
 
                         // Display font size and font name under the bounding box
-                        ctx.font = `${fontSize}px Arial`;
+                        // ctx.font = `${fontSize}px Arial`;
+                        ctx.font = "12px Arial";
+
                         ctx.fillStyle = document.getElementById("display-text-color-input").value || "yellow";
-                        ctx.fillText(`Font Size: ${fontSize}`, x, y + height + fontSize * 2 + 5);
-                        ctx.fillText(`Font Name: ${fontName}`, x, y + height + (fontSize * 3) + 10);
+                        ctx.fillText(`Font Size: ${fontSize}`, x, y + height + fontSize * 1 + 5);
+                        ctx.fillText(`Font Name: ${fontName}`, x, y + height + (fontSize * 2) + 10);
 
                         // Display the bounding box coordinates
                         ctx.font = "12px Arial";
@@ -285,10 +305,10 @@
                         nearestGridSerialNumber = (gridY - 1) * gridSize + gridX;
 
                         // Display the grid zone serial number under the bounding box
-                        ctx.fillText(`Nearest Grid Zone: ${nearestGridSerialNumber}`, x, y + height + (fontSize * 4) + 20);
+                        ctx.fillText(`Nearest Grid Zone: ${nearestGridSerialNumber}`, x, y + height + (fontSize * 3) + 20);
                         // Display font color outside the bounding box
                         const fontcolor = guessFontColor(x, y, width, height)
-                        ctx.fillText(`font color: ${fontcolor}`, x, y + height + (fontSize * 5) + 30);
+                        ctx.fillText(`font color: ${fontcolor}`, x, y + height + (fontSize * 4) + 30);
 
                     }
                 }
@@ -382,15 +402,17 @@
                             // Serial number for each grid
                             const gridSerialNumber = document.createElement("div");
                             gridSerialNumber.classList.add("grid-serial-number");
+                            gridSerialNumber.style.color = document.getElementById("display-text-color-input").value || "yellow";
+
                             const serialNumber = i * gridSize + j + 1;
-                            if (serialNumber <= 100) {
+                            if (serialNumber <= gridSize*gridSize) {
                                 gridSerialNumber.innerText = serialNumber.toString();
                             }
                             // Calculate the center coordinates of the grid zone
                             const centerX = x + cellWidth / 2;
                             const centerY = y + cellHeight / 2;
                             // Position the serial number in the center of the grid zone
-                            gridLinesContainer.fillStyle = document.getElementById("display-text-color-input").value || "yellow";
+                            // gridLinesContainer.style.color = document.getElementById("display-text-color-input").value || "yellow";
 
                             gridSerialNumber.style.left = `${
                                 centerX - gridSerialNumber.offsetWidth / 2
